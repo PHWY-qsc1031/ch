@@ -1,0 +1,1461 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>浙大校史馆时空冒险</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "PingFang SC", "Microsoft Yahei", sans-serif;
+  }
+
+  :root {
+    --zju-deep: #582078;
+    --zju-main: #612784;
+    --zju-light: #7b3ca0;
+    --zju-pale: #efe9f5;
+    --gold: #c9a848;
+    --gold-light: #e6d499;
+    --text-main: #222;
+    --glass: rgba(255, 255, 255, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.85);
+  }
+
+  body {
+    background: linear-gradient(135deg, #fcfaff, #f5f0fc, #f0e8f8);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 背景层：每个场景一张照片 */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    z-index: 1;
+  }
+
+  .bg.show {
+    opacity: 1;
+  }
+
+  .bg-museum {
+    background-image: url("https://www.zju.edu.cn/_upload/article/images/0f/52/1350732008414034420.jpg");
+  }
+
+  .bg-west {
+    background-image: url("https://www.zju.edu.cn/_upload/article/images/90/74/4234871401321044301.jpg");
+  }
+
+  .bg-zhu {
+    background-image: url("https://www.zju.edu.cn/_upload/article/images/1d/94/7431020411404034471.jpg");
+  }
+
+  .bg-wang {
+    background-image: url("https://acv.zju.edu.cn/_upload/article/images/20/8e/3024401340040021440.jpg");
+  }
+
+  .bg-cheng {
+    background-image: url("https://acv.zju.edu.cn/_upload/article/images/82/31/8401230040013044217.jpg");
+  }
+
+  .bg-old {
+    background-image: url("https://www.zju.edu.cn/_upload/article/images/1d/94/7431020411404034471.jpg");
+  }
+
+  .bg-new {
+    background-image: url("https://www.zju.edu.cn/_upload/article/images/7d/24/2041340101142044473.jpg");
+  }
+
+  .bg-mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 10, 30, 0.38);
+    z-index: 2;
+  }
+
+  /* 穿越转场 */
+  .transition-layer {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .transition-layer.active {
+    pointer-events: auto;
+    animation: warp 1.8s ease-in-out forwards;
+  }
+
+  @keyframes warp {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    40% { opacity: 1; box-shadow: inset 0 0 160px var(--gold-light); }
+    60% { opacity: 0.9; }
+    100% { opacity: 0; }
+  }
+
+  .warp-text {
+    color: #fff;
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    margin-bottom: 16px;
+  }
+
+  .warp-ring {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--gold-light);
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* 换装面板：最前面 */
+  .dressup-panel {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(140deg, #582078dd, #3c1454dd);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .dressup-panel.hidden {
+    display: none;
+  }
+
+  .dressup-wrap {
+    width: 100%;
+    max-width: 840px;
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 12px 45px #00000025;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 28px;
+  }
+
+  .dressup-title {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    color: var(--zju-deep);
+  }
+
+  .player-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .player-port {
+    width: 260px;
+    height: 360px;
+    border-radius: 18px;
+    background: #e9e2f0;
+    box-shadow: 0 8px 24px #00000018;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #612784;
+    font-weight: bold;
+  }
+
+  .breath {
+    animation: breath 4s infinite ease-in-out;
+  }
+
+  @keyframes breath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.025); }
+  }
+
+  .dressup-slot-group {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .slot-title {
+    font-size: 16px;
+    color: var(--zju-deep);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .opt-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .cloth-opt {
+    width: 76px;
+    height: 76px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background: #f4f0f8;
+    cursor: pointer;
+    transition: 0.25s;
+    box-shadow: 0 3px 10px #00000010;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    text-align: center;
+    color: #582078;
+  }
+
+  .cloth-opt:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px #61278435;
+  }
+
+  .cloth-opt.active {
+    border-color: var(--gold);
+    background: #efe4d0;
+  }
+
+  .dressup-confirm {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .btn-main {
+    padding: 14px 32px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--zju-main), var(--zju-light));
+    color: #fff;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+
+  .btn-main.btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    color: #3b2c0f;
+  }
+
+  .btn-main:hover {
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    padding: 11px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    background: var(--glass);
+    color: var(--zju-main);
+    border: 1px solid #dccfe8;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background: var(--zju-pale);
+  }
+
+  /* 展厅文物 */
+  #artifactRoom {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+  }
+
+  #artifactRoom.hidden {
+    display: none;
+  }
+
+  .artifact {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    cursor: pointer;
+    border-radius: 16px;
+    transform: scale(1);
+    transition: 0.35s;
+    box-shadow: 0 6px 22px #00000018;
+    overflow: hidden;
+    border: 2px solid transparent;
+    background: #fff;
+  }
+
+  .artifact img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .artifact:hover {
+    transform: scale(1.09);
+    border-color: var(--gold);
+  }
+
+  .artifact-tip {
+    position: absolute;
+    bottom: -30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 13px;
+    color: #fff;
+    text-shadow: 0 2px 6px #00000080;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  /* NPC立绘：照片剪切 */
+  .portrait {
+    position: absolute;
+    right: 6%;
+    top: 14%;
+    width: 200px;
+    height: 340px;
+    opacity: 0;
+    transform: translateX(24px);
+    transition: all 0.6s ease;
+    pointer-events: none;
+    background: #e9e2f0;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+  }
+
+  .portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .portrait.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* 对话框 */
+  .dialog-box {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    bottom: 4%;
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 22px 26px;
+    z-index: 10;
+    max-height: 42vh;
+    overflow-y: auto;
+  }
+
+  .name-bar {
+    color: var(--zju-deep);
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  .dialog-text {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #222;
+  }
+
+  .choice-group {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .choice-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid #dccfe8;
+    color: var(--zju-deep);
+    text-align: left;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+
+  .choice-btn:hover {
+    background: var(--zju-pale);
+    transform: translateX(4px);
+  }
+
+  .top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 22px;
+    background: var(--glass);
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .top-bar.hidden {
+    display: none;
+  }
+
+  .info {
+    font-size: 14px;
+    color: #fff;
+    text-shadow: 0 1px 4px #00000080;
+    margin: 0 6px;
+  }
+
+  .qiu-shi {
+    color: var(--gold-light);
+    font-weight: bold;
+  }
+
+  .ctrl-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chapter-tip {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #612784, #7b3ca0);
+    color: #fff;
+    padding: 8px 22px;
+    border-radius: 32px;
+    font-size: 14px;
+    opacity: 0;
+    transition: 0.6s;
+    z-index: 25;
+  }
+
+  .chapter-tip.show {
+    opacity: 1;
+  }
+
+  .hide {
+    display: none !important;
+  }
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- 背景照片层 -->
+    <div class="bg bg-museum show" id="bgMuseum"></div>
+    <div class="bg bg-west" id="bgWest"></div>
+    <div class="bg bg-zhu" id="bgZhu"></div>
+    <div class="bg bg-wang" id="bgWang"></div>
+    <div class="bg bg-cheng" id="bgCheng"></div>
+    <div class="bg bg-old" id="bgOld"></div>
+    <div class="bg bg-new" id="bgNew"></div>
+
+    <div class="bg-mask"></div>
+
+    <!-- 穿越转场 -->
+    <div class="transition-layer" id="warpLayer">
+      <div class="warp-text">时空穿梭中……</div>
+      <div class="warp-ring"></div>
+    </div>
+
+    <!-- 换装面板：最前面 -->
+    <div class="dressup-panel" id="dressupPanel">
+      <div class="dressup-wrap">
+        <div class="dressup-title">✨ 你的形象 · 人文社科实验班新生</div>
+        <div class="player-view">
+          <div class="player-port breath" id="playerPort">
+            主角立绘<br />浙大校服
+          </div>
+          <div style="color:#582078;font-weight:600">当前穿搭：浙大校服</div>
+        </div>
+        <div class="dressup-slot-group">
+          <div>
+            <div class="slot-title">🎽 上衣</div>
+            <div class="opt-row">
+              <div class="cloth-opt active" data-type="top" data-name="浙大校服">校服</div>
+              <div class="cloth-opt" data-type="top" data-name="简约衬衫">衬衫</div>
+              <div class="cloth-opt" data-type="top" data-name="针织毛衣">毛衣</div>
+            </div>
+          </div>
+          <div>
+            <div class="slot-title">🎒 配饰</div>
+            <div class="opt-row">
+              <div class="cloth-opt active" data-type="acc" data-name="无配饰">无</div>
+              <div class="cloth-opt" data-type="acc" data-name="帆布包">帆布包</div>
+            </div>
+          </div>
+          <div>
+            <div class="slot-title">✨ 风格</div>
+            <div class="opt-row">
+              <div class="cloth-opt active" data-type="style" data-name="清爽学生">清爽</div>
+              <div class="cloth-opt" data-type="style" data-name="文雅书卷">书卷</div>
+            </div>
+          </div>
+        </div>
+        <div class="dressup-confirm">
+          <button class="btn-main btn-gold" onclick="confirmDress()">确认形象，出发前往浙大校史馆</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 校史馆展厅 -->
+    <div id="artifactRoom" class="hide">
+      <div class="artifact" style="top:18%;left:12%" onclick="startWarp('west')">
+        <img src="https://images.unsplash.com/photo-1519452575472-5c19be42941f?auto=format&fit=crop&w=400&q=80" alt="西迁旧课本" />
+        <div class="artifact-tip">西迁求学旧课本</div>
+      </div>
+
+      <div class="artifact" style="top:22%;right:15%" onclick="startWarp('zhu')">
+        <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=400&q=80" alt="竺可桢日记" />
+        <div class="artifact-tip">竺可桢校长手稿日记</div>
+      </div>
+
+      <div class="artifact" style="top:50%;left:8%" onclick="startWarp('wang')">
+        <img src="https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=400&q=80" alt="王淦昌手稿" />
+        <div class="artifact-tip">王淦昌科研手稿</div>
+      </div>
+
+      <div class="artifact" style="top:55%;right:12%" onclick="startWarp('cheng')">
+        <img src="https://images.unsplash.com/photo-1517976487492-5750f31959f4?auto=format&fit=crop&w=400&q=80" alt="两弹一星功勋章" />
+        <div class="artifact-tip">两弹一星功勋纪念章</div>
+      </div>
+
+      <div class="artifact" style="bottom:18%;left:20%" onclick="startWarp('old')">
+        <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=400&q=80" alt="民国老校徽" />
+        <div class="artifact-tip">民国浙大老校徽</div>
+      </div>
+
+      <div class="artifact" style="bottom:22%;right:18%" onclick="startWarp('new')">
+        <img src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=400&q=80" alt="新时代科创展品" />
+        <div class="artifact-tip">新时代科创展品</div>
+      </div>
+    </div>
+
+    <div class="chapter-tip" id="chapterTip"></div>
+
+    <!-- NPC立绘：人物照片 -->
+    <div class="portrait" id="portrait">
+      <img id="npcImg" src="" alt="NPC立绘" />
+    </div>
+
+    <div class="top-bar" id="topBar" class="hidden">
+      <div class="info">探索进度：<span id="stageName">校史馆主展厅</span></div>
+      <div class="info">求是传承值：<span class="qiu-shi" id="qsVal">0</span></div>
+      <div class="ctrl-group">
+        <button class="btn-secondary" onclick="backMuseum()">返回展厅</button>
+        <button class="btn-secondary" onclick="restartGame()">重新开始</button>
+      </div>
+    </div>
+
+    <div class="dialog-box" id="dialogBox" class="hide">
+      <div class="name-bar"><span id="speaker">——</span></div>
+      <div class="dialog-text" id="dialogText"></div>
+      <div class="choice-group" id="choiceGroup"></div>
+    </div>
+  </div>
+
+<script>
+  let qsScore = 0;
+  let currentScene = "museum";
+  let outfit = { top: "浙大校服", acc: "无配饰", style: "清爽学生" };
+
+  // 人物照片：竺可桢、王淦昌
+  const npcImages = {
+    zhu: "https://bkimg.cdn.bcebos.com/smart/from16102000/041373f082025aafd056250ef3edab64034f1a77",
+    wang: "https://bkimg.cdn.bcebos.com/smart/from16102000/9213b07eca806538dc66ef999adda144ad348266"
+  };
+
+  // 场景配置：每个场景都绑定浙大真实照片背景
+  const sceneData = {
+    museum: {
+      name: "校史馆主展厅",
+      bgId: "bgMuseum",
+      npc: "校史馆讲解员",
+      npcImg: "",
+      opening: {
+        text: "欢迎来到浙大校史馆！眼前六件展品，每一件都连通一段求是往事。触碰展品，你就能穿越回对应的时光。我建议你先从西迁旧课本开始，那里藏着浙大最艰难也最动人的一段记忆。",
+        choices: [
+          { text: "好，我先去看看西迁旧课本", next: "warpWest" },
+          { text: "我想先了解竺可桢校长的故事", next: "warpZhu" },
+          { text: "为什么校史馆里会有科研手稿？", next: "talk1" }
+        ]
+      },
+      talk1: {
+        text: "因为浙大从来不是只读书的地方。从竺可桢校长到王淦昌先生，再到两弹一星功勋人物，浙大人一直在用知识回应国家的需要。",
+        choices: [
+          { text: "这和我理解的大学不太一样", next: "talk2" },
+          { text: "所以求是精神也包括为国担当？", next: "talk3" }
+        ]
+      },
+      talk2: {
+        text: "很多人以为大学只是学习专业知识，但浙大的传统里，知识始终和家国联系在一起。读书不是为了独善其身，而是为了看清时代，承担责任。",
+        choices: [
+          { text: "那我该怎么开始理解这份责任？", next: "talk4" },
+          { text: "我还是先去看展品吧", next: "end" }
+        ]
+      },
+      talk3: {
+        text: "当然。求是不仅是求真，也是担当。求真让你明白世界是什么样，担当让你思考自己应该做什么。",
+        choices: [
+          { text: "这两个问题听起来很重要", next: "talk5" },
+          { text: "我去西迁时空里找找答案", next: "warpWest" }
+        ]
+      },
+      talk4: {
+        text: "从参观校史馆开始，从认真听每一段故事开始，从问问自己为什么来到这里开始。答案不是一下子出现的，但路会越走越清楚。",
+        choices: [
+          { text: "我会从一件件展品开始看起", next: "end" },
+          { text: "谢谢您的提醒", next: "end" }
+        ]
+      },
+      talk5: {
+        text: "对，到浙大来做什么？将来毕业后要做什么样的人？这两个问题会陪你很久。",
+        choices: [
+          { text: "我想去见见竺可桢校长", next: "warpZhu" },
+          { text: "我先去西迁的时空看看", next: "warpWest" }
+        ]
+      },
+      warpWest: { next: "warp", target: "west" },
+      warpZhu: { next: "warp", target: "zhu" }
+    },
+
+    west: {
+      name: "西迁岁月",
+      bgId: "bgWest",
+      npc: "西迁浙大学子",
+      npcImg: "",
+      opening: {
+        text: "你终于来了。这里不是今天的浙大，而是战火中的浙大。我们刚刚走完一段山路，课本还背在包袱里，前面还不知道能不能平安开课。",
+        choices: [
+          { text: "你们为什么一定要继续办学？", next: "w1" },
+          { text: "一路上最困难的是什么？", next: "w2" },
+          { text: "我是来听你们故事的", next: "w3" }
+        ]
+      },
+      w1: {
+        text: "因为学校不能倒。敌人想打断我们的文脉，想让年轻人失去读书的机会。我们偏不，只要还能走，就继续上课；只要还有书声，国家就还有希望。",
+        choices: [
+          { text: "这就是文军长征吗？", next: "w4" },
+          { text: "你们不怕牺牲吗？", next: "w5" }
+        ]
+      },
+      w2: {
+        text: "怕。但更怕的是没有未来。我们走过很多路，住过破庙，吃过粗粮，有时候连灯油都不够。可先生们仍然讲课，学生们仍然记笔记。",
+        choices: [
+          { text: "这样的环境怎么安心学习？", next: "w6" },
+          { text: "大家靠什么坚持下来？", next: "w7" }
+        ]
+      },
+      w3: {
+        text: "太好了，终于有人愿意听我们说话。我们不是英雄，只是一群想把书读下去、把学校办下去的人。",
+        choices: [
+          { text: "你们的故事我会记下来", next: "w8" },
+          { text: "您能说说当时的课堂吗？", next: "w9" }
+        ]
+      },
+      w4: {
+        text: "对，军队长征守护国土，我们长征守护文脉。虽然没有枪炮，但我们守住的是另一条战线。",
+        choices: [
+          { text: "这条战线同样重要", next: "w10" },
+          { text: "我开始理解西迁的意义了", next: "w11" }
+        ]
+      },
+      w5: {
+        text: "怕，但不能退。如果连读书人都退了，这个国家还靠谁撑着？我们不一定能亲眼看到胜利，但总得有人先把路走出来。",
+        choices: [
+          { text: "这种信念从哪里来？", next: "w12" },
+          { text: "谢谢您告诉我这些", next: "w13" }
+        ]
+      },
+      w6: {
+        text: "很难。外面有炮火，心里有不安。但只要先生开口讲课，大家就会慢慢静下来，因为课堂是我们暂时最安稳的地方。",
+        choices: [
+          { text: "课堂对你们来说意味着什么？", next: "w14" },
+          { text: "我以前没有这样理解过课堂", next: "w15" }
+        ]
+      },
+      w7: {
+        text: "靠求是。竺校长说过，我们要坚持办学，不能中断。这句话像一盏灯，照着我们一路走下去。",
+        choices: [
+          { text: "求是精神原来这么具体", next: "w16" },
+          { text: "我想去见见竺校长", next: "warpZhu" }
+        ]
+      },
+      w8: {
+        text: "那就请你记住：浙大不是因为条件好才坚持，而是因为再难也不肯放弃。",
+        choices: [
+          { text: "我会记住这句话", next: "w17" },
+          { text: "你们后来还遇到了什么？", next: "w18" }
+        ]
+      },
+      w9: {
+        text: "课堂很简陋，桌子不稳，屋顶漏雨，但先生们讲得很认真，学生们记得很仔细。大家都知道，这样的读书机会来之不易。",
+        choices: [
+          { text: "简陋的课堂也能出人才吗？", next: "w19" },
+          { text: "那时候大家都读些什么？", next: "w20" }
+        ]
+      },
+      w10: {
+        text: "是的。国土不能丢，文脉也不能丢。守住文脉，就是守住国家明天的可能性。",
+        choices: [
+          { text: "我第一次觉得历史离我这么近", next: "w21" },
+          { text: "我想把这份感受带回现在", next: "end" }
+        ]
+      },
+      w11: {
+        text: "谢谢你。西迁不是一段遥远的历史，它是浙大人刻在骨头里的选择。",
+        choices: [
+          { text: "我会把这个选择记在心里", next: "end" }
+        ]
+      },
+      w12: {
+        text: "来自对国家的责任，来自对知识的尊重，也来自对竺校长的信任。他没有丢下我们，我们也不能丢下学校。",
+        choices: [
+          { text: "我想见见这位校长", next: "warpZhu" },
+          { text: "这份信任很动人", next: "w22" }
+        ]
+      },
+      w13: {
+        text: "不客气。希望你们后来的人，能比我们读得更安稳，也比我们更明白为什么读书。",
+        choices: [
+          { text: "我会努力不辜负", next: "end" }
+        ]
+      },
+      w14: {
+        text: "是希望。只要课堂还在，我们就还能看见未来。",
+        choices: [
+          { text: "现在我也想珍惜课堂", next: "w23" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      w15: {
+        text: "那你以后上课，或许会想起今天。原来安稳读书，并不是理所当然的事。",
+        choices: [
+          { text: "我会重新看待我的课堂", next: "end" }
+        ]
+      },
+      w16: {
+        text: "对，求是不是口号，是再难也不肯停下的脚步。",
+        choices: [
+          { text: "我想去见见竺校长", next: "warpZhu" },
+          { text: "我先返回展厅", next: "back" }
+        ]
+      },
+      w17: {
+        text: "好。请你替我们看看后来的浙大，看看它是不是还像今天这样，不肯放弃。",
+        choices: [
+          { text: "我会的", next: "end" }
+        ]
+      },
+      w18: {
+        text: "缺衣少食，缺医少药，还有随时可能到来的危险。但我们一边赶路，一边上课，一边把书一本一本传下去。",
+        choices: [
+          { text: "这就是浙大的底色", next: "w24" },
+          { text: "我想返回展厅整理一下心情", next: "back" }
+        ]
+      },
+      w19: {
+        text: "当然。人才不是因为条件好才出现，而是因为在最困难的时候仍然有人不肯停止学习。",
+        choices: [
+          { text: "我明白了，条件不是借口", next: "w25" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      w20: {
+        text: "数理、外文、文史都有。先生们说，国家需要全面的人才，不能因为打仗就只学一种学问。",
+        choices: [
+          { text: "原来那时就强调全面学习", next: "w26" },
+          { text: "我先返回展厅", next: "back" }
+        ]
+      },
+      w21: {
+        text: "历史从来不是冷冰冰的文字，它是一群人咬着牙走出来的路。",
+        choices: [
+          { text: "我会带着这份感受继续探索", next: "end" }
+        ]
+      },
+      w22: {
+        text: "嗯。这种师生之间的信任，是西迁路上最珍贵的东西之一。",
+        choices: [
+          { text: "我想去见见竺校长", next: "warpZhu" }
+        ]
+      },
+      w23: {
+        text: "很好。希望你以后每一堂课，都能想起今天这里的雨声、书声和脚步声。",
+        choices: [
+          { text: "我会的", next: "end" }
+        ]
+      },
+      w24: {
+        text: "是的。浙大的底色，不是高楼，不是名气，而是再难也不肯倒下的精神。",
+        choices: [
+          { text: "我会记住这个底色", next: "end" }
+        ]
+      },
+      w25: {
+        text: "对。真正拉开差距的，往往不是起点，而是你在困难里还愿不愿意继续往前走。",
+        choices: [
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      w26: {
+        text: "所以浙大后来能出那么多人才，不是偶然。从那时起，它就一直鼓励学生打开视野，承担更大的责任。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      },
+      warpZhu: { next: "warp", target: "zhu" }
+    },
+
+    zhu: {
+      name: "竺可桢校长的时光",
+      bgId: "bgZhu",
+      npc: "竺可桢校长",
+      npcImg: npcImages.zhu,
+      opening: {
+        text: "同学，你来了。我常常问新入学的学子两个问题：第一，到浙大来做什么？第二，将来毕业后要做什么样的人？你今天来这里，心里有没有答案？",
+        choices: [
+          { text: "我还没有答案，但我想寻找", next: "z1" },
+          { text: "我想求真求知，也想承担责任", next: "z2" },
+          { text: "您当初为什么选择西迁？", next: "z3" }
+        ]
+      },
+      z1: {
+        text: "没有答案是正常的。求是之路不是一天走完的，答案也不是别人给你的，而是你在读书、行路、做事中慢慢找到的。",
+        choices: [
+          { text: "我该从哪里开始寻找？", next: "z4" },
+          { text: "您年轻时也迷茫过吗？", next: "z5" }
+        ]
+      },
+      z2: {
+        text: "很好。求真与担当，本就是一体。求真让你不糊涂，担当让你不退缩。",
+        choices: [
+          { text: "如何才能做到只问是非不计利害？", next: "z6" },
+          { text: "您觉得青年最重要的品质是什么？", next: "z7" }
+        ]
+      },
+      z3: {
+        text: "因为浙大不能倒。一所大学倒下，文脉就断了；文脉断了，民族的精神力量也会受影响。我必须带着师生继续走下去。",
+        choices: [
+          { text: "您当时怕不怕？", next: "z8" },
+          { text: "西迁路上最让您牵挂的是什么？", next: "z9" }
+        ]
+      },
+      z4: {
+        text: "从认真对待每一件小事开始。认真听课，认真读书，认真思考国家和自己的关系。小事做扎实，答案自然会浮现。",
+        choices: [
+          { text: "我明白了，慢慢来", next: "z10" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z5: {
+        text: "当然。我也曾反复追问自己，读书治学究竟为了什么。但追问不是坏事，它说明你没有把人生当作理所当然。",
+        choices: [
+          { text: "那您最后的答案是什么？", next: "z11" },
+          { text: "我会继续追问自己", next: "end" }
+        ]
+      },
+      z6: {
+        text: "遇事不要先问得失，先问是非。这件事是不是真理？是不是有益于国家和人民？把这个放在前面，你就不容易走错。",
+        choices: [
+          { text: "我会把这句话记下来", next: "z12" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z7: {
+        text: "我想是诚实。对知识诚实，对自己诚实，对国家诚实。一个不诚实的人，走得再快也走不远。",
+        choices: [
+          { text: "诚实比能力更重要吗？", next: "z13" },
+          { text: "我会提醒自己保持诚实", next: "end" }
+        ]
+      },
+      z8: {
+        text: "怕。但责任在前，怕也不能退。身后是几百师生，是浙大的文脉，我没有后退的理由。",
+        choices: [
+          { text: "您当时靠什么稳住自己？", next: "z14" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z9: {
+        text: "我最牵挂学生的安全，也牵挂学校能不能继续开课。只要学生还在读书，浙大就还活着。",
+        choices: [
+          { text: "您把学生看得比自己重", next: "z15" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z10: {
+        text: "不急，求是之路本来就很长。你今天来问我，已经是一个好的开始。",
+        choices: [
+          { text: "我会继续走下去", next: "end" }
+        ]
+      },
+      z11: {
+        text: "利用所学，造福国家与人民。这就是我一生的答案。",
+        choices: [
+          { text: "我也想追寻这样的答案", next: "z16" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z12: {
+        text: "好。真正的求是，不是在顺境里说说而已，而是在利害面前仍然选择是非。",
+        choices: [
+          { text: "我会努力做到", next: "end" }
+        ]
+      },
+      z13: {
+        text: "能力可以慢慢培养，诚实却是根。根不正，再强的能力也只是漂在水面上的东西。",
+        choices: [
+          { text: "我会先守住诚实", next: "end" }
+        ]
+      },
+      z14: {
+        text: "靠信念，也靠师生之间的信任。我相信他们，他们也相信我，我们就这样一路走了下来。",
+        choices: [
+          { text: "这种信任很珍贵", next: "z17" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      z15: {
+        text: "学生是学校的未来，也是国家的未来。我不守护他们，谁来守护？",
+        choices: [
+          { text: "我会把这份心意带回现在", next: "end" }
+        ]
+      },
+      z16: {
+        text: "很好。希望你将来毕业后，仍然记得今天这两个问题。",
+        choices: [
+          { text: "我会一直记得", next: "end" }
+        ]
+      },
+      z17: {
+        text: "是啊，这种信任，是浙大最宝贵的财富之一。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      }
+    },
+
+    wang: {
+      name: "王淦昌先生的实验室",
+      bgId: "bgWang",
+      npc: "王淦昌",
+      npcImg: npcImages.wang,
+      opening: {
+        text: "你好，同学。科学没有国界，但科学家有祖国。我这一生，一直想把这句话落到实处。",
+        choices: [
+          { text: "您为什么愿意隐姓埋名？", next: "wa1" },
+          { text: "科研最重要的品质是什么？", next: "wa2" },
+          { text: "失败的时候您怎么面对？", next: "wa3" }
+        ]
+      },
+      wa1: {
+        text: "因为国家需要。如果我的工作能让祖国更安全，能让后人少受欺辱，我隐姓埋名又算得了什么？",
+        choices: [
+          { text: "您有没有后悔过？", next: "wa4" },
+          { text: "这份选择让我很震撼", next: "wa5" }
+        ]
+      },
+      wa2: {
+        text: "我想是严谨和坚持。实验来不得半点虚假，数据是什么样就是什么样，不能为了结果去捏造。",
+        choices: [
+          { text: "那灵感重要吗？", next: "wa6" },
+          { text: "严谨也是求是吗？", next: "wa7" }
+        ]
+      },
+      wa3: {
+        text: "失败是常事。关键不是沮丧，而是复盘。哪里错了？为什么错了？下一步怎么改？把失败变成数据，就不可怕。",
+        choices: [
+          { text: "我以前很怕失败", next: "wa8" },
+          { text: "谢谢您教我看待失败", next: "wa9" }
+        ]
+      },
+      wa4: {
+        text: "没有。虽然不能和家人常联系，不能公开自己的工作，但我知道自己在做什么，也知道这件事值得做。",
+        choices: [
+          { text: "您靠什么支撑自己？", next: "wa10" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa5: {
+        text: "谢谢。对科学家来说，祖国的需要，比个人名声更重要。",
+        choices: [
+          { text: "我会记住这句话", next: "wa11" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa6: {
+        text: "灵感很重要，但灵感只垂青有准备的人。没有长期积累，没有反复实验，灵感来了也抓不住。",
+        choices: [
+          { text: "我明白了，积累比空想重要", next: "wa12" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa7: {
+        text: "当然。求是不仅是人文精神，也是科学精神。实事求是，在实验室里同样重要。",
+        choices: [
+          { text: "原来求是贯通文理", next: "wa13" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa8: {
+        text: "怕失败很正常，但不能因为怕就不做。科学就是在一次次失败里，慢慢接近真相。",
+        choices: [
+          { text: "我会重新看待失败", next: "wa14" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa9: {
+        text: "好。希望你以后遇到困难时，不是先问能不能成功，而是先问应不应该做。",
+        choices: [
+          { text: "我会的", next: "end" }
+        ]
+      },
+      wa10: {
+        text: "靠对国家的责任，也靠对科学的热爱。这两样东西，能让人在最孤独的时候仍然坚持。",
+        choices: [
+          { text: "这份热爱和责任让我敬佩", next: "wa15" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa11: {
+        text: "谢谢。希望你将来无论学什么，都把国家放在心里。",
+        choices: [
+          { text: "我会的", next: "end" }
+        ]
+      },
+      wa12: {
+        text: "对。不要只等灵感降临，要先把自己准备好。",
+        choices: [
+          { text: "我会从积累开始", next: "end" }
+        ]
+      },
+      wa13: {
+        text: "是的。求是是一种态度，不是某一个学科的专利。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      },
+      wa14: {
+        text: "很好。失败不是终点，而是帮你找到正确方向的信号。",
+        choices: [
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      wa15: {
+        text: "谢谢。国家的需要，就是我们这代人最好的方向。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      }
+    },
+
+    cheng: {
+      name: "两弹一星戈壁时空",
+      bgId: "bgCheng",
+      npc: "戈壁功勋科研者",
+      npcImg: "",
+      opening: {
+        text: "这里是戈壁，风沙很大，条件很苦。我们隐姓埋名，远离家人，日夜攻关，只为造出属于中国自己的核盾牌。",
+        choices: [
+          { text: "你们为什么愿意来这里？", next: "c1" },
+          { text: "这里的生活条件到底有多苦？", next: "c2" },
+          { text: "成功那一刻是什么感受？", next: "c3" }
+        ]
+      },
+      c1: {
+        text: "因为国家需要。如果我们不做，别人就会用核威胁压着我们。我们必须把主动权拿到自己手里。",
+        choices: [
+          { text: "您有没有想过家人？", next: "c4" },
+          { text: "这份牺牲太大了", next: "c5" }
+        ]
+      },
+      c2: {
+        text: "缺水、缺粮、风沙大，冬天冷，夏天晒。帐篷是宿舍，地面是办公桌，有时候连一顿热饭都不容易。",
+        choices: [
+          { text: "大家靠什么坚持？", next: "c6" },
+          { text: "我很难想象这种生活", next: "c7" }
+        ]
+      },
+      c3: {
+        text: "一瞬间，所有人都安静了，然后哭了。所有的苦、所有的思念、所有的孤独，在那一刻都值了。",
+        choices: [
+          { text: "那是一种怎样的哭？", next: "c8" },
+          { text: "我能感受到那种重量", next: "c9" }
+        ]
+      },
+      c4: {
+        text: "想。但我们不能说，不能问，不能联系。只能把想念压在心里，把工作做到最好。",
+        choices: [
+          { text: "您怎么面对这种孤独？", next: "c10" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c5: {
+        text: "是很大。但比起国家的安全，比起后代不用再受核讹诈，我们觉得值得。",
+        choices: [
+          { text: "我会永远记住你们", next: "c11" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c6: {
+        text: "靠信念，也靠战友。大家都是为了同一个目标来的，互相支撑，就熬过去了。",
+        choices: [
+          { text: "这种战友情很珍贵", next: "c12" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c7: {
+        text: "是的，很难想象。但正因为难，才更要有人做。",
+        choices: [
+          { text: "我会更珍惜现在的安稳", next: "c13" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c8: {
+        text: "是终于成功的哭，是没有辜负国家的哭，也是终于可以稍微放下心的哭。",
+        choices: [
+          { text: "我好像能理解一点了", next: "c14" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c9: {
+        text: "谢谢。这份重量，需要一代代人接下去。",
+        choices: [
+          { text: "我会接住这份重量", next: "end" }
+        ]
+      },
+      c10: {
+        text: "把孤独变成工作的动力。越是想念家人，就越要把事情做好，因为这是我们选择的路。",
+        choices: [
+          { text: "我会记住这种选择", next: "c15" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      c11: {
+        text: "谢谢。请你记住，和平不是理所当然的，是有人在默默守护。",
+        choices: [
+          { text: "我会记住", next: "end" }
+        ]
+      },
+      c12: {
+        text: "是的，在那样的地方，战友就是家人。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      },
+      c13: {
+        text: "很好。安稳的课堂、安静的实验室，都是前辈们用辛苦换来的。",
+        choices: [
+          { text: "我会珍惜", next: "end" }
+        ]
+      },
+      c14: {
+        text: "谢谢你。历史不会忘记那些默默付出的人。",
+        choices: [
+          { text: "我会把这段故事记在心里", next: "end" }
+        ]
+      },
+      c15: {
+        text: "好。希望你以后也能做出这样的选择：在国家需要的时候，站出来。",
+        choices: [
+          { text: "我会努力", next: "end" }
+        ]
+      }
+    },
+
+    old: {
+      name: "民国老浙大",
+      bgId: "bgOld",
+      npc: "求是书院先生",
+      npcImg: "",
+      opening: {
+        text: "同学，你从未来来？很好。求是二字，从书院创办之日起，就一直是我们立学的根本。",
+        choices: [
+          { text: "求是二字最早是什么意思？", next: "o1" },
+          { text: "当时的学生都读些什么？", next: "o2" },
+          { text: "您希望学生成为什么样的人？", next: "o3" }
+        ]
+      },
+      o1: {
+        text: "求是，就是实事求是。做学问要真实，做人要踏实，不能只讲空言，更不能弄虚作假。",
+        choices: [
+          { text: "这和今天的求是一样吗？", next: "o4" },
+          { text: "我以前理解得太浅了", next: "o5" }
+        ]
+      },
+      o2: {
+        text: "中西兼修。既要读传统经史，也要学格致、算学、外文。我们希望学生既能扎根本国，又能放眼世界。",
+        choices: [
+          { text: "那时就强调中西贯通？", next: "o6" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      o3: {
+        text: "我希望他们成为有方向、有底线、有担当的人。方向是国家，底线是真理，担当是责任。",
+        choices: [
+          { text: "这三个词让我很受触动", next: "o7" },
+          { text: "我会努力成为这样的人", next: "end" }
+        ]
+      },
+      o4: {
+        text: "一样。时代会变，但求是不会变。变的是知识内容，不变的是求真的态度。",
+        choices: [
+          { text: "我明白了，求是是一种态度", next: "o8" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      o5: {
+        text: "没关系，现在明白也不晚。求是不是一天练成的，是一辈子守住的。",
+        choices: [
+          { text: "我会用一辈子守住它", next: "end" }
+        ]
+      },
+      o6: {
+        text: "是的。如果只守旧学而不开新学，就会落后；如果只学西学而忘本，也会失根。",
+        choices: [
+          { text: "我会兼顾传统与新知", next: "end" }
+        ]
+      },
+      o7: {
+        text: "谢谢。方向、底线、担当，三者缺一不可。",
+        choices: [
+          { text: "我会把这三个词记下来", next: "end" }
+        ]
+      },
+      o8: {
+        text: "很好。态度端正了，学问才有根，人生才有方向。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      }
+    },
+
+    new: {
+      name: "新时代浙大",
+      bgId: "bgNew",
+      npc: "浙大青年学长",
+      npcImg: "",
+      opening: {
+        text: "欢迎来到新时代浙大。这里比以前更开阔，学科更多，平台也更大。但求是精神，还是老样子。",
+        choices: [
+          { text: "新时代的求是精神是什么样？", next: "n1" },
+          { text: "大一新生最该做好什么？", next: "n2" },
+          { text: "学习压力很大怎么办？", next: "n3" }
+        ]
+      },
+      n1: {
+        text: "是认真科研，是扎实专业，是理性思考，也是心怀家国。以前为国攻坚，现在同样要服务国家发展。",
+        choices: [
+          { text: "我明白了，求是一直都在", next: "n4" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      n2: {
+        text: "先打好基础，再去尝试。不要一开始就急着定义自己，多去听课，多去交流，多去校史馆看看。",
+        choices: [
+          { text: "我会先从校史馆开始", next: "n5" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      n3: {
+        text: "压力大是正常的，但不要被别人的节奏带着走。找到自己的目标，比盲目追赶更重要。",
+        choices: [
+          { text: "我以前总在和别人比较", next: "n6" },
+          { text: "谢谢您", next: "end" }
+        ]
+      },
+      n4: {
+        text: "对，它只是换了一种表达方式，内核一直没变。",
+        choices: [
+          { text: "我会把这份内核带回日常", next: "end" }
+        ]
+      },
+      n5: {
+        text: "很好。了解学校从哪里来，你才更清楚自己要到哪里去。",
+        choices: [
+          { text: "我返回展厅继续探索", next: "back" }
+        ]
+      },
+      n6: {
+        text: "别比进度，比方向。只要方向对，慢一点也没关系。",
+        choices: [
+          { text: "我会重新找到自己的方向", next: "end" }
+        ]
+      }
+    }
+  };
+
+  // 换装选择
+  document.querySelectorAll(".cloth-opt").forEach(el => {
+    el.onclick = function () {
+      document.querySelectorAll(`.cloth-opt[data-type="${this.dataset.type}"]`).forEach(i => i.classList.remove("active"));
+      this.classList.add("active");
+      outfit[this.dataset.type] = this.dataset.name;
+      document.querySelector("#playerPort").innerText = `主角立绘\n${outfit.top}\n${outfit.acc}\n${outfit.style}`;
+    };
+  });
+
+  // 确认换装：进入游戏主流程
+  function confirmDress() {
+    document.getElementById("dressupPanel").classList.add("hidden");
+    document.getElementById("artifactRoom").classList.remove("hide");
+    document.getElementById("topBar").classList.remove("hidden");
+    changeScene("museum");
+  }
+
+  // 穿越触发
+  function startWarp(targetSceneId) {
+    const warp = document.getElementById("warpLayer");
+    warp.classList.add("active");
+
+    setTimeout(() => {
+      warp.classList.remove("active");
+      changeScene(targetSceneId);
+    }, 1800);
+  }
+
+  // 切换场景：隐藏文物 + 切换浙大真实照片背景
+  function changeScene(sceneId) {
+    currentScene = sceneId;
+    const s = sceneData[sceneId];
+
+    if (sceneId === "museum") {
+      document.getElementById("artifactRoom").classList.remove("hidden");
+    } else {
+      document.getElementById("artifactRoom").classList.add("hidden");
+    }
+
+    document.querySelectorAll(".bg").forEach(bg => bg.classList.remove("show"));
+    document.getElementById(s.bgId).classList.add("show");
+
+    document.getElementById("stageName").innerText = s.name;
+    showTip("来到：" + s.name);
+    showDialog(s.npc, s.opening);
+    document.getElementById("portrait").classList.add("show");
+  }
+
+  function backMuseum() {
+    changeScene("museum");
+  }
+
+  function showTip(txt) {
+    const tip = document.getElementById("chapterTip");
+    tip.innerText = txt;
+    tip.classList.add("show");
+    setTimeout(() => tip.classList.remove("show"), 1800);
+  }
+
+  // 交互式对话：支持十句以上和选项分支
+  function showDialog(speaker, node) {
+    const box = document.getElementById("dialogBox");
+    const nameDom = document.getElementById("speaker");
+    const textDom = document.getElementById("dialogText");
+    const choiceWrap = document.getElementById("choiceGroup");
+    const npcImg = document.getElementById("npcImg");
+
+    box.classList.remove("hide");
+    nameDom.innerText = speaker;
+    textDom.innerText = node.text;
+    choiceWrap.innerHTML = "";
+
+    // 显示对应 NPC 照片立绘
+    if (sceneData[currentScene].npcImg) {
+      npcImg.src = sceneData[currentScene].npcImg;
+      npcImg.style.display = "block";
+    } else {
+      npcImg.style.display = "none";
+    }
+
+    node.choices.forEach(ch => {
+      const btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.innerText = ch.text;
+      btn.onclick = () => {
+        if (ch.addScore) {
+          qsScore += ch.addScore;
+          document.getElementById("qsVal").innerText = qsScore;
+        }
+
+        if (ch.next === "back") {
+          backMuseum();
+          return;
+        }
+        if (ch.next === "end") {
+          box.classList.add("hide");
+          return;
+        }
+        if (ch.next === "warp") {
+          startWarp(ch.target);
+          return;
+        }
+
+        const nextNode = sceneData[currentScene][ch.next];
+        showDialog(speaker, nextNode);
+      };
+      choiceWrap.appendChild(btn);
+    });
+  }
+
+  function restartGame() {
+    qsScore = 0;
+    document.getElementById("qsVal").innerText = 0;
+    document.getElementById("artifactRoom").classList.remove("hidden");
+    document.getElementById("artifactRoom").classList.remove("hide");
+    document.getElementById("topBar").classList.add("hidden");
+    document.getElementById("dialogBox").classList.add("hide");
+    document.getElementById("portrait").classList.remove("show");
+    document.getElementById("dressupPanel").classList.remove("hidden");
+  }
+</script>
+</body>
+</html>
